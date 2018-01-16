@@ -1,0 +1,242 @@
+---
+title: "Sketch 1: Abalone"
+author: "Caryn Johansen"
+date: "1|15|2018"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+## Introduction
+
+Data comes from an original (non-machine-learning) study:
+Warwick J Nash, Tracy L Sellers, Simon R Talbot, Andrew J Cawthorn and Wes B Ford (1994)
+"The Population Biology of Abalone (_Haliotis_ species) in Tasmania. I. Blacklip Abalone (_H. rubra_) from the North Coast and Islands of Bass Strait",
+Sea Fisheries Division, Technical Report No. 48 (ISSN 1034-3288)
+
+Original Owners of Database:
+
+Marine Resources Division
+Marine Research Laboratories - Taroona
+Department of Primary Industry and Fisheries, Tasmania
+GPO Box 619F, Hobart, Tasmania 7001, Australia
+(contact: Warwick Nash +61 02 277277, wnash '@' dpi.tas.gov.au)
+
+Donor of Database:
+
+Sam Waugh (Sam.Waugh '@' cs.utas.edu.au)
+Department of Computer Science, University of Tasmania
+GPO Box 252C, Hobart, Tasmania 7001, Australia 
+
+Downloaded from: http://archive.ics.uci.edu/ml/datasets/Abalone
+
+### Attribute information
+
+| Name | Data Type | Measurement Unit | Description |
+| ---- | --------- | ---------------- | ----------- |
+| Sex | nominal | -- | M, F, and I (infant) |
+| Length | continuous | mm | Longest shell measurement |
+| Diameter | continuous | mm | perpendicular to length |
+| Height | continuous | mm | with meat in shell |
+| Whole weight | continuous | grams | whole abalone |
+| Shucked weight | continuous | grams | weight of meat |
+| Viscera weight | continuous | grams | gut weight (after bleeding) |
+| Shell weight | continuous | grams | after being dried |
+| Rings | integer | -- | +1.5 gives the age in years |
+
+## Setup
+
+
+```r
+library(tidyverse)
+```
+
+```
+## ── Attaching packages ────────────────────────────────── tidyverse 1.2.1 ──
+```
+
+```
+## ✔ ggplot2 2.2.1     ✔ purrr   0.2.4
+## ✔ tibble  1.3.4     ✔ dplyr   0.7.4
+## ✔ tidyr   0.7.2     ✔ stringr 1.2.0
+## ✔ readr   1.1.1     ✔ forcats 0.2.0
+```
+
+```
+## ── Conflicts ───────────────────────────────────── tidyverse_conflicts() ──
+## ✖ dplyr::filter() masks stats::filter()
+## ✖ dplyr::lag()    masks stats::lag()
+```
+
+```r
+library(GGally)
+```
+
+```
+## 
+## Attaching package: 'GGally'
+```
+
+```
+## The following object is masked from 'package:dplyr':
+## 
+##     nasa
+```
+
+
+## Data
+
+
+```r
+abalone <- read.delim("data/abalone.data", header=F, sep=",")
+colnames(abalone) <- c("sex","length", "diameter", "height", "whole", "shucked", "viscera","shell", "rings")
+head(abalone)
+```
+
+```
+##   sex length diameter height  whole shucked viscera shell rings
+## 1   M  0.455    0.365  0.095 0.5140  0.2245  0.1010 0.150    15
+## 2   M  0.350    0.265  0.090 0.2255  0.0995  0.0485 0.070     7
+## 3   F  0.530    0.420  0.135 0.6770  0.2565  0.1415 0.210     9
+## 4   M  0.440    0.365  0.125 0.5160  0.2155  0.1140 0.155    10
+## 5   I  0.330    0.255  0.080 0.2050  0.0895  0.0395 0.055     7
+## 6   I  0.425    0.300  0.095 0.3515  0.1410  0.0775 0.120     8
+```
+
+Clean data
+
+
+```r
+sum(is.na(abalone))
+```
+
+```
+## [1] 0
+```
+
+```r
+summary(abalone)
+```
+
+```
+##  sex          length         diameter          height      
+##  F:1307   Min.   :0.075   Min.   :0.0550   Min.   :0.0000  
+##  I:1342   1st Qu.:0.450   1st Qu.:0.3500   1st Qu.:0.1150  
+##  M:1528   Median :0.545   Median :0.4250   Median :0.1400  
+##           Mean   :0.524   Mean   :0.4079   Mean   :0.1395  
+##           3rd Qu.:0.615   3rd Qu.:0.4800   3rd Qu.:0.1650  
+##           Max.   :0.815   Max.   :0.6500   Max.   :1.1300  
+##      whole           shucked          viscera           shell       
+##  Min.   :0.0020   Min.   :0.0010   Min.   :0.0005   Min.   :0.0015  
+##  1st Qu.:0.4415   1st Qu.:0.1860   1st Qu.:0.0935   1st Qu.:0.1300  
+##  Median :0.7995   Median :0.3360   Median :0.1710   Median :0.2340  
+##  Mean   :0.8287   Mean   :0.3594   Mean   :0.1806   Mean   :0.2388  
+##  3rd Qu.:1.1530   3rd Qu.:0.5020   3rd Qu.:0.2530   3rd Qu.:0.3290  
+##  Max.   :2.8255   Max.   :1.4880   Max.   :0.7600   Max.   :1.0050  
+##      rings       
+##  Min.   : 1.000  
+##  1st Qu.: 8.000  
+##  Median : 9.000  
+##  Mean   : 9.934  
+##  3rd Qu.:11.000  
+##  Max.   :29.000
+```
+No NA's in the data.
+
+### General correlations
+
+
+```r
+abalone %>% ggpairs(column = 2:9)
+```
+
+![](sketch1_files/figure-html/unnamed-chunk-4-1.png)<!-- -->
+
+
+### Weight and Length
+
+
+```r
+abalone %>% select(sex, length, whole) %>%
+  ggplot() + geom_point(aes(x = length, y = whole, color=sex), alpha = 0.5)
+```
+
+![](sketch1_files/figure-html/unnamed-chunk-5-1.png)<!-- -->
+
+No surprises here - the longer you are, the more you weigh, in general
+
+### Rings and shell length
+
+Relationship between adult abalone ring number and shell length
+
+
+```r
+abalone %>% select(sex, length, rings) %>% filter(sex != "I") %>%
+  ggplot(aes(x=length, y=rings, color=sex)) + geom_point(alpha = 0.5)
+```
+
+![](sketch1_files/figure-html/unnamed-chunk-6-1.png)<!-- -->
+
+Sex does not appear to have a strong impact here either.
+
+### finding an adult sex relationship
+
+Do any of the traits have major sex differences?
+
+
+```r
+abalone %>% filter(sex != "I") %>%
+  gather(trait, value, -sex) %>%
+  ggplot(aes(x=sex, y = value)) +
+  geom_boxplot() +
+  facet_wrap(~trait, scales = "free")
+```
+
+![](sketch1_files/figure-html/unnamed-chunk-7-1.png)<!-- -->
+
+Hmmm, by and large, the genders do not visually appear to have major differences.
+
+### differences between adult and infant
+
+
+```r
+abalone %>%
+  gather(trait, value, -sex) %>%
+  ggplot(aes(x=sex, y = value)) +
+  geom_boxplot() +
+  facet_wrap(~trait, scales = "free")
+```
+
+![](sketch1_files/figure-html/unnamed-chunk-8-1.png)<!-- -->
+
+"Infants" here are also not dramatically different, though on average are smaller (diamtere, length), and weight less overall.
+
+We can also see that pretty clearly using geom_density:
+
+
+```r
+abalone %>%
+  gather(trait, value, -sex) %>%
+  ggplot(aes(x = value, color=sex)) +
+  geom_density() +
+  facet_wrap(~trait, scales = "free")
+```
+
+![](sketch1_files/figure-html/unnamed-chunk-9-1.png)<!-- -->
+
+
+### Something new
+
+
+```r
+abalone %>% filter(sex != "I") %>%
+  ggplot(aes(x=shell, y = whole, color=sex, size = log(rings))) +
+  geom_point(alpha = 0.3)
+```
+
+![](sketch1_files/figure-html/unnamed-chunk-10-1.png)<!-- -->
+
+There's not a whole lot of variation in this data set. I tried taking the log of the ring numbers to help accentuate small differences, but it didn't help much.
+
+Ok! well... that wasn't a super exciting first sketch. BUT - I have some ideas for 3D plotting that I'll try next. Also, this dataset *may* work for categorical prediction if a sample is an infant or not, but none of these traits seems very good a predicting sex. I'll do a little research and see if I'm wrong.
+

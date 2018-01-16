@@ -1,0 +1,146 @@
+---
+title: "Sketch 1: Abalone"
+author: "Caryn Johansen"
+date: "1|15|2018"
+output: html_document
+---
+
+## Introduction
+
+Data comes from an original (non-machine-learning) study:
+Warwick J Nash, Tracy L Sellers, Simon R Talbot, Andrew J Cawthorn and Wes B Ford (1994)
+"The Population Biology of Abalone (_Haliotis_ species) in Tasmania. I. Blacklip Abalone (_H. rubra_) from the North Coast and Islands of Bass Strait",
+Sea Fisheries Division, Technical Report No. 48 (ISSN 1034-3288)
+
+Original Owners of Database:
+
+Marine Resources Division
+Marine Research Laboratories - Taroona
+Department of Primary Industry and Fisheries, Tasmania
+GPO Box 619F, Hobart, Tasmania 7001, Australia
+(contact: Warwick Nash +61 02 277277, wnash '@' dpi.tas.gov.au)
+
+Donor of Database:
+
+Sam Waugh (Sam.Waugh '@' cs.utas.edu.au)
+Department of Computer Science, University of Tasmania
+GPO Box 252C, Hobart, Tasmania 7001, Australia 
+
+Downloaded from: http://archive.ics.uci.edu/ml/datasets/Abalone
+
+### Attribute information
+
+| Name | Data Type | Measurement Unit | Description |
+| ---- | --------- | ---------------- | ----------- |
+| Sex | nominal | -- | M, F, and I (infant) |
+| Length | continuous | mm | Longest shell measurement |
+| Diameter | continuous | mm | perpendicular to length |
+| Height | continuous | mm | with meat in shell |
+| Whole weight | continuous | grams | whole abalone |
+| Shucked weight | continuous | grams | weight of meat |
+| Viscera weight | continuous | grams | gut weight (after bleeding) |
+| Shell weight | continuous | grams | after being dried |
+| Rings | integer | -- | +1.5 gives the age in years |
+
+## Setup
+
+```{r}
+library(tidyverse)
+library(GGally)
+```
+
+
+## Data
+
+```{r}
+abalone <- read.delim("data/abalone.data", header=F, sep=",")
+colnames(abalone) <- c("sex","length", "diameter", "height", "whole", "shucked", "viscera","shell", "rings")
+head(abalone)
+```
+
+Clean data
+
+```{r}
+sum(is.na(abalone))
+summary(abalone)
+```
+No NA's in the data.
+
+### General correlations
+
+```{r}
+abalone %>% ggpairs(column = 2:9)
+```
+
+
+### Weight and Length
+
+```{r}
+abalone %>% select(sex, length, whole) %>%
+  ggplot() + geom_point(aes(x = length, y = whole, color=sex), alpha = 0.5)
+  
+```
+
+No surprises here - the longer you are, the more you weigh, in general
+
+### Rings and shell length
+
+Relationship between adult abalone ring number and shell length
+
+```{r}
+abalone %>% select(sex, length, rings) %>% filter(sex != "I") %>%
+  ggplot(aes(x=length, y=rings, color=sex)) + geom_point(alpha = 0.5)
+```
+
+Sex does not appear to have a strong impact here either.
+
+### finding an adult sex relationship
+
+Do any of the traits have major sex differences?
+
+```{r}
+abalone %>% filter(sex != "I") %>%
+  gather(trait, value, -sex) %>%
+  ggplot(aes(x=sex, y = value)) +
+  geom_boxplot() +
+  facet_wrap(~trait, scales = "free")
+  
+```
+
+Hmmm, by and large, the genders do not visually appear to have major differences.
+
+### differences between adult and infant
+
+```{r}
+abalone %>%
+  gather(trait, value, -sex) %>%
+  ggplot(aes(x=sex, y = value)) +
+  geom_boxplot() +
+  facet_wrap(~trait, scales = "free")
+```
+
+"Infants" here are also not dramatically different, though on average are smaller (diamtere, length), and weight less overall.
+
+We can also see that pretty clearly using geom_density:
+
+```{r}
+abalone %>%
+  gather(trait, value, -sex) %>%
+  ggplot(aes(x = value, color=sex)) +
+  geom_density() +
+  facet_wrap(~trait, scales = "free")
+```
+
+
+### Something new
+
+```{r}
+abalone %>% filter(sex != "I") %>%
+  ggplot(aes(x=shell, y = whole, color=sex, size = log(rings))) +
+  geom_point(alpha = 0.3)
+```
+
+There's not a whole lot of variation in this data set. I tried taking the log of the ring numbers to help accentuate small differences, but it didn't help much.
+
+Ok! well... that wasn't a super exciting first sketch. BUT - I have some ideas for 3D plotting that I'll try next. Also, this dataset *may* work for categorical prediction if a sample is an infant or not, but none of these traits seems very good a predicting sex. I'll do a little research and see if I'm wrong.
+

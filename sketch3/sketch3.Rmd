@@ -1,0 +1,242 @@
+---
+title: "sketch3"
+author: "Caryn Johansen"
+date: "1/17/2018"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+## Introduction
+
+Return to the abalone data set from sketch 1 to do some 3D plotting.
+
+## Set Up
+
+```{r}
+library(tidyverse)
+library(plot3D)
+library(GGally)
+```
+
+
+## Data
+
+```{r}
+abalone <- read.delim("../sketch1/data/abalone.data", sep=",", header=F)
+```
+
+### Attribute information
+
+| Name | Data Type | Measurement Unit | Description |
+| ---- | --------- | ---------------- | ----------- |
+| Sex | nominal | -- | M, F, and I (infant) |
+| Length | continuous | mm | Longest shell measurement |
+| Diameter | continuous | mm | perpendicular to length |
+| Height | continuous | mm | with meat in shell |
+| Whole weight | continuous | grams | whole abalone |
+| Shucked weight | continuous | grams | weight of meat |
+| Viscera weight | continuous | grams | gut weight (after bleeding) |
+| Shell weight | continuous | grams | after being dried |
+| Rings | integer | -- | +1.5 gives the age in years |
+
+```{r}
+colnames(abalone) <- c("sex","length", "diameter", "height", "whole", "shucked", "viscera","shell", "rings")
+```
+
+### clean data
+
+```{r}
+summary(abalone)
+str(abalone)
+dim(abalone)
+abalone <- abalone %>% na.omit()
+dim(abalone)
+```
+
+The curious thing about this data set is that some samples have a height of zero. That may be a typo, or an indication of missing data, but there is probably not a real abalone with a height of zero. So let's remove those.
+
+```{r}
+abalone %>% filter(height == 0)
+```
+
+Yeah, the lengths and diameter are middle of the road, and so the height seems to be incorrect here. REMOVE.
+
+```{r}
+abalone <- abalone %>% filter(height != 0)
+```
+
+
+## 3D plots
+
+Summarizing the data to figure out what values works best on what axes
+
+```{r}
+abalone %>% gather(trait, value, -sex) %>%
+  group_by(trait) %>% 
+  summarise(traitMin = min(value), traitMax = max(value))
+```
+
+I'm curious about the number of rings, and I want to know what the best predictors for the number of rings are.
+
+```{r}
+abalone %>% 
+  gather(trait, value, -rings) %>% 
+  ggplot(aes(x=value, y=rings)) + geom_point() + facet_wrap(~trait, scale="free")
+abalone %>%
+  gather(trait, value, -c(sex, rings)) %>%
+  ggplot(aes(x=value, y=rings, color=sex)) + geom_point() + facet_wrap(~trait, scale="free")
+```
+
+In general, it appears that the larger an abalone is, the more rings it will have.
+
+Length, diameter and height
+
+```{r}
+points3D(abalone$height, abalone$diameter, abalone$rings, phi = 30, theta = 30)
+```
+
+So there are these two points that are way out there. What's going on with those?
+
+```{r}
+abalone %>% ggplot(aes(x=height, y=rings)) + geom_point()
+```
+
+```{r}
+tail(sort(abalone$height), 2)
+weird1 <- abalone %>% filter(height == tail(sort(height), 2)[1])
+weird2 <- abalone %>% filter(height == tail(sort(height), 2)[2])
+
+abalone %>% ggplot(aes(x=length, y=diameter, color=height)) + geom_point() +
+  geom_point(data=weird1, color="red") +
+  geom_point(data=weird2, color="red")
+```
+
+These two abarant points are more or less middle of the pack in otherwise pretty linearly correlated traits (color height is a pretty nice gradient with a peppering of light spots).
+
+```{r}
+abalone %>% ggplot(aes(x=length, y=diameter, color=height)) + geom_point() +
+  geom_point(data=weird1, color="red") +
+  geom_point(data=weird2)
+```
+
+Bringing those two spots to the front with the same coloring scheme. Ah, the agony of removal! I cannot say if they are wrong - maybe the middle one is a rad mutant, or actually reflects the actual biodiversity range and the people who collected it didn't like handling long 
+
+```{r}
+abalone %>% ggplot(aes(x=length, y=whole, color=height)) + geom_point() +
+  geom_point(data=weird1, color="red") +
+  geom_point(data=weird2)
+abalone %>% ggplot(aes(x=length, y=rings, color=height)) + geom_point() +
+  geom_point(data=weird1, color="red") +
+  geom_point(data=weird2)
+```
+
+However, the top weight is so middle of the pack that it's hard to not think it's a data entry error.
+
+```{r}
+ tail(sort(abalone$height), 10)
+abalone <- abalone %>% filter(height < 0.3)
+abalone %>% ggplot(aes(x=height, y=rings)) + geom_point()
+```
+
+Ok, agony over. Back to rings.
+
+```{r}
+abalone %>%
+  gather(trait, value, -c(sex, rings)) %>%
+  ggplot(aes(x=value, y=rings, color=sex)) + geom_point() + facet_wrap(~trait, scale="free")
+```
+```{r}
+points3D(abalone$height, abalone$diameter, abalone$rings, phi = 30, theta = 30)
+```
+
+## Predictive model
+
+remove 10% of the dataset for prediction and model testing
+
+```{r}
+n_samples <- dim(abalone)[1]
+test_remove <- sample(1:n_samples, 0.1*n_samples)
+test_abalone <- abalone[test_remove,]
+train_abalone <- abalone[-test_remove,]
+```
+
+#### Starting with the most basic
+
+```{r}
+md1 <- lm(rings ~ height, data=train_abalone)
+summary(md1)
+train_abalone %>% ggplot(aes(x=height, y=rings)) + geom_point() + geom_abline(intercept = coef(md1)[1], slope=coef(md1)[2])
+```
+
+That's not terrible, but it also seems not that great - it's failing to cover the upper variation of rings.
+
+Is height or length a better predictor?
+
+```{r}
+md2 <- lm(rings ~ length, data=train_abalone)
+summary(md2)
+anova(md1, md2)
+```
+
+Height has a larger adjusted R squared, and has a lower RSS. I'll use height going forward as a better predictor, especially since they are very correlated
+
+```{r}
+md3 <- lm(rings ~ height + diameter, data= train_abalone)
+summary(md3)
+anova(md1, md3)
+train_abalone %>% ggplot(aes(x=height, y=rings)) + geom_point() + geom_abline(intercept = coef(md3)[1], slope=coef(md3)[2])
+```
+
+The second model is different from the other, but not really that much better.
+
+Diameter does have a significant effect on the number of rings, but diameter and height are also correlated, so we may be getting a confounding effect here.
+
+### Adding Random effects
+
+```{r}
+library(lme4)
+```
+
+Adding sex identification as a random effect - each sex (M, F, I) will have a separate effect on the number of rings.
+I think this will improve the prediction, as the infant abalone take up a majority of the low-ring numbers.
+
+```{r}
+md4 <- lmer(rings ~ (1|sex) + height, data=train_abalone)
+summary(md4)
+cat("==============\n")
+coef(md4)
+```
+
+```{r}
+train_abalone %>% 
+  ggplot(aes(x=height, y=rings, color=sex)) + 
+  geom_point() + 
+  geom_smooth(method = "lm")
+  
+  # geom_smooth(formula = rings ~ (1|sex) + height)
+```
+
+Well... Maybe this is not a linear fit. Future models may do better with a polynomial or logarithmic fit, or thoughtful transoformations of the data.
+
+### Prediction
+
+Going with the random effects model to predict ring values from my testing data set
+
+```{r}
+test_abalone <- test_abalone %>% mutate(predictRings = predict(md4, .))
+test_abalone %>% 
+  ggplot(aes(x=rings, y=predictRings)) + geom_point() + xlim(0,30) + ylim(0,30) +
+  geom_abline(intercept = 0, slope = 1, color="red")
+```
+
+I've built better models in my life! Looking forward to figuring this one out...
+
+## What I learned
+
+I started out today wanting to fiddle with 3D plots, but got caught up with predicting ring number. That's ok, but perhaps I should keep these sketched more focused.
+
+I learned about theta and phi in the 3D plotting library. Tomorrow perhaps I should just focus on visualizing 3D stuff.
+3D visualization can be tricky, because sometimes it adds more confusion than information. 
+
+Today I also touched on some basics of linear modeling - comparing models and parameters, using a model to predict values, and assessing my model using a testing data set.

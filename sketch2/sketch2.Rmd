@@ -1,0 +1,72 @@
+---
+title: "Chapter 4"
+author: "Caryn Johansen"
+date: "1/2/2018"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r}
+library(tidyverse)
+library(GGally)
+```
+
+I have very little information about the raw data. It's from "Introduction to Statistical Thinking", found at: http://www-bcf.usc.edu/~gareth/ISL/data.html
+
+It's heart attack data, perhaps from people in South Africa.
+
+## data
+
+```{r}
+heart <- read.delim("data/Heart.csv", header=T, sep=",",row.names = 1)
+colnames(heart)
+```
+
+# Data cleaning
+
+look for and remove missing data and re-factor the sex, heart disease T/F
+
+I can do that with a single command:
+
+```{r}
+heart <- read.delim("data/Heart.csv", header=T, sep=",",row.names = 1)
+summary(heart)
+heart <- heart %>% 
+  na.omit() %>% 
+  mutate(AHD = as.factor(if_else(AHD == "No", 0, 1)), Ca = as.factor(Ca), Sex = as.factor(Sex))
+summary(heart)
+```
+
+# Exploring data
+
+```{r}
+heart %>% 
+  gather(trait, value) %>% 
+  ggplot(aes(x=value)) + geom_histogram(stat="count") + facet_wrap(~trait, scales = "free")
+```
+
+I'm going to remove a few variables.
+
+```{r}
+heart <- heart %>% select(-c(Thal, Slope, RestECG, ExAng, ChestPain))
+heart %>% 
+  gather(trait, value) %>% 
+  ggplot(aes(x=value)) + geom_histogram(stat="count") + facet_wrap(~trait, scales = "free")
+```
+
+
+# Logistic Regression
+
+```{r}
+heartfit <- glm(AHD ~ ., data = heart, family = "binomial")
+summary(heartfit)
+```
+
+# Compounding factors
+
+```{r}
+heart %>% ggpairs(columns = c("Age", "AHD", "Ca"), aes(color=Sex))
+```
+
+A fairly incomplete look, but it's the end of the day. It will be useful to build on this later, and it seems like a good dataset to deep dive into logistic regressions.

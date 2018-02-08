@@ -8,6 +8,10 @@ data/
 # Session Data files
 .RData
 
+# R markdown output
+.html
+.Rmd
+
 # Example code in package build process
 *-Ex.R
 

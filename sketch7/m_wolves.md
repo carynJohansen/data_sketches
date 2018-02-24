@@ -1,5 +1,5 @@
 ---
-title: "Mongolian Wolves"
+title: "The Roaming Mongolian Wolf"
 author: "Caryn Johansen"
 date: "2/21/2018"
 output: 
@@ -10,6 +10,10 @@ output:
 # Introduction
 
 Study citation: Kaczensky, P., Ganbaatar, O., Enksaikhaan, N., Walzer, C. 2006. Wolves in Great Gobi B SPA GPS tracking study 2003-2005 dataset.
+
+This data is about MONGOLIAN WOLVES.
+
+![](https://upload.wikimedia.org/wikipedia/commons/7/7b/ZooZ%C3%BCrich_Canis_lupus_chanco_97.JPG)
 
 # Set up
 
@@ -307,6 +311,20 @@ ggmap(zimzik_map) + geom_point(zimzik, mapping = aes(x=location.long, y=location
 ```
 
 ![](m_wolves_files/figure-html/unnamed-chunk-18-2.png)<!-- -->
+
+```r
+ggmap(zimzik_map) + geom_point(zimzik, mapping = aes(x=location.long, y=location.lat,color=month, group=individual.local.identifier)) + geom_line(zimzik, mapping = aes(x=location.long, y=location.lat,color=month, group=date)) + facet_wrap(~year)
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_path).
+```
+
+![](m_wolves_files/figure-html/unnamed-chunk-18-3.png)<!-- -->
 
 Map both wolves together
 
